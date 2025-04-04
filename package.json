@@ -1,15 +1,20 @@
 {
   "name": "nodejs",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^22.13.11"
-  }
+    "@discordjs/rest": "^2.4.3",
+    "@types/node": "^22.13.11",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
+  },
+  "description": ""
 }
