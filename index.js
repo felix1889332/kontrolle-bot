@@ -220,5 +220,11 @@ async function sendShutdownMessage() {
   if (channel) await channel.send("🔴 **Bot wird beendet...**").catch(console.error);
   process.exit(0);
 }
+try {
+  client.login(process.env.DISCORD_TOKEN);
+} catch (err) {
+  console.error("❌ Fehler beim Login:", err);
+  notifyError(`❌ Fehler beim Bot-Login: ${err.message}`);
+}
 
 client.login(process.env.DISCORD_TOKEN);
