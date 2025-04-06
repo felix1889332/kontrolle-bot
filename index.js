@@ -1,6 +1,7 @@
-require('dotenv').config();
-const fs = require('fs');
-const express = require('express');
+const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
+require("dotenv").config();
+const fs = require("fs");
+const express = require("express");
 const {
   Client,
   GatewayIntentBits,
@@ -13,192 +14,198 @@ const {
   Routes,
   Events,
   InteractionType,
-  StringSelectMenuBuilder
-} = require('discord.js');
-const { REST } = require('@discordjs/rest');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+  UserSelectMenuBuilder
+} = require("discord.js");
+const { REST } = require("@discordjs/rest");
 
 const app = express();
-app.get('/', (req, res) => res.send('✅ Kontrolle-Bot läuft!'));
-app.get('/health', (req, res) => {
-  if (client.isReady()) res.status(200).send('✅ Bot ist bereit');
-  else res.status(500).send('❌ Bot nicht bereit');
+app.get("/", (req, res) => res.send("✅ Kontrolle-Bot läuft!"));
+app.get("/health", (req, res) => {
+  res.status(client.isReady() ? 200 : 500).send(client.isReady() ? "✅ Bot ist bereit" : "❌ Bot nicht bereit");
 });
-app.listen(3000, () => console.log('🌐 Webserver läuft auf Port 3000'));
+app.listen(3000, () => console.log("🌐 Webserver läuft auf Port 3000"));
 
-// Keep-alive
+// 🔁 Selbstping für Replit
 setInterval(() => {
   if (process.env.REPL_URL) {
-    fetch('https://' + process.env.REPL_URL).catch(() => {});
+    fetch("https://" + process.env.REPL_URL).catch(() => {});
   }
 }, 4 * 60 * 1000);
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.once('ready', () => {
+client.once("ready", () => {
   console.log(`✅ Bot ist online als ${client.user.tag}`);
-  const channel = client.channels.cache.get(process.env.STARTUP_CHANNEL_ID);
-  if (channel) channel.send('🟢 Bot wurde gestartet!').catch(console.error);
+
+  const startupChannel = client.channels.cache.get(process.env.STARTUP_CHANNEL_ID);
+  if (startupChannel) {
+    startupChannel.send("🟢 **Kontrolle-Bot wurde gestartet!**").catch(console.error);
+  }
 });
 
+// Slash-Commands
 const commands = [
-  new SlashCommandBuilder().setName('kontrolle').setDescription('Starte eine Kontrolle'),
-  new SlashCommandBuilder().setName('stats').setDescription('Zeigt die Kontrollstatistik'),
-  new SlashCommandBuilder().setName('health').setDescription('Bot-Status überprüfen'),
+  new SlashCommandBuilder().setName("kontrolle").setDescription("Starte eine Kontrolle"),
+  new SlashCommandBuilder().setName("stats").setDescription("Zeigt die Kontrollstatistik an"),
+  new SlashCommandBuilder().setName("health").setDescription("Statuscheck")
 ].map(cmd => cmd.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-const guilds = process.env.GUILD_IDS.split(',').map(id => id.trim());
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
-  try {
-    console.log('📡 Registriere Slash-Commands...');
-    for (const guildId of guilds) {
-      await rest.put(
-        Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
-        { body: commands }
-      );
+  const guilds = [process.env.GUILD_ID_1, process.env.GUILD_ID_2];
+  for (const guildId of guilds) {
+    try {
+      await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId), { body: commands });
+      console.log(`✅ Slash-Commands registriert für Guild ${guildId}`);
+    } catch (error) {
+      console.error("❌ Fehler beim Registrieren:", error);
+      notifyError(`❌ Fehler bei Command-Registrierung (Guild ${guildId}): ${error.message}`);
     }
-    console.log('✅ Slash-Commands registriert');
-  } catch (err) {
-    console.error('❌ Fehler beim Registrieren:', err);
   }
 })();
 
+// 📥 Command-Handler
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (interaction.isChatInputCommand() && interaction.commandName === 'kontrolle') {
-    const select = new StringSelectMenuBuilder()
-      .setCustomId('kontrolle_select')
-      .setPlaceholder('Wähle die kontrollierte Person aus')
-      .addOptions([
-        { label: 'Max Mustermann', value: 'max' },
-        { label: 'Erika Beispiel', value: 'erika' },
-        { label: 'Selbst eintragen', value: 'custom' },
-      ]);
+  // --- /kontrolle ---
+  if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
+    const userSelect = new UserSelectMenuBuilder()
+      .setCustomId("kontrolle_user_select")
+      .setPlaceholder("👤 Wähle kontrollierte Person aus")
+      .setMinValues(1)
+      .setMaxValues(1);
 
-    const row = new ActionRowBuilder().addComponents(select);
+    const row = new ActionRowBuilder().addComponents(userSelect);
 
     await interaction.reply({
-      content: '👥 Bitte wähle die kontrollierte Person aus:',
+      content: "Wähle die Person, die kontrolliert wurde:",
       components: [row],
       ephemeral: true
     });
   }
 
-  if (interaction.isStringSelectMenu() && interaction.customId === 'kontrolle_select') {
-    const selected = interaction.values[0];
+  // --- Select Menu verarbeitet ---
+  if (interaction.isUserSelectMenu() && interaction.customId === "kontrolle_user_select") {
+    const selectedUser = interaction.users.first();
+    const userTag = selectedUser.tag;
+    const userMention = `<@${selectedUser.id}>`;
 
-    if (selected === 'custom') {
-      const modal = new ModalBuilder()
-        .setCustomId('kontrolle_modal')
-        .setTitle('📝 Kontrolle durchführen')
-        .addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('input_name')
-              .setLabel('👤 Name')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('input_ort')
-              .setLabel('📍 Ort')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('input_status')
-              .setLabel('📝 Status')
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('input_uhrzeit')
-              .setLabel('🕒 Uhrzeit')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          )
-        );
+    const modal = new ModalBuilder()
+      .setCustomId(`kontrolle_modal__${selectedUser.id}`)
+      .setTitle("📝 Kontrolle durchführen")
+      .addComponents(
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId("input_ort").setLabel("📍 Ort").setStyle(TextInputStyle.Short).setRequired(true)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId("input_status").setLabel("📝 Status").setStyle(TextInputStyle.Paragraph).setRequired(true)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId("input_dabei").setLabel("👥 Wer war dabei?").setStyle(TextInputStyle.Short).setRequired(false)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId("input_uhrzeit").setLabel("🕒 Uhrzeit").setStyle(TextInputStyle.Short).setRequired(true))
+      );
 
-      await interaction.showModal(modal);
-    } else {
-      await interaction.reply({ content: `✅ Du hast **${selected}** ausgewählt.`, ephemeral: true });
-    }
+    await interaction.showModal(modal);
   }
 
-  if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'kontrolle_modal') {
-    try {
-      const name = interaction.fields.getTextInputValue('input_name');
-      const ort = interaction.fields.getTextInputValue('input_ort');
-      const status = interaction.fields.getTextInputValue('input_status');
-      const uhrzeit = interaction.fields.getTextInputValue('input_uhrzeit');
-      const user = interaction.user.tag;
+  // --- Modal Verarbeitung ---
+  if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith("kontrolle_modal__")) {
+    const kontrollierteId = interaction.customId.split("__")[1];
+    const kontrollierteMention = `<@${kontrollierteId}>`;
 
-      let stats = { today: 0, total: 0, lastName: 'Noch niemand', lastBy: 'Unbekannt', users: {} };
-      try {
-        stats = JSON.parse(fs.readFileSync('stats.json', 'utf8'));
-      } catch {}
+    const ort = interaction.fields.getTextInputValue("input_ort");
+    const status = interaction.fields.getTextInputValue("input_status");
+    const dabei = interaction.fields.getTextInputValue("input_dabei") || "Keine Angabe";
+    const uhrzeit = interaction.fields.getTextInputValue("input_uhrzeit");
+    const user = interaction.user.tag;
 
-      stats.today += 1;
-      stats.total += 1;
-      stats.lastName = name;
-      stats.lastBy = user;
-      stats.users[user] = (stats.users[user] || 0) + 1;
+    // 📊 Statistik laden/speichern
+    let stats = { today: 0, total: 0, lastName: "Noch niemand", lastBy: "Unbekannt", users: {} };
+    try { stats = JSON.parse(fs.readFileSync("stats.json", "utf8")); } catch {}
 
-      fs.writeFileSync('stats.json', JSON.stringify(stats, null, 2));
+    stats.today++;
+    stats.total++;
+    stats.lastName = kontrollierteMention;
+    stats.lastBy = user;
+    stats.users[user] = (stats.users[user] || 0) + 1;
 
-      const embed = new EmbedBuilder()
-        .setColor('#2ecc71')
-        .setTitle('📋 Kontrolle durchgeführt')
-        .addFields(
-          { name: '👤 Name', value: name },
-          { name: '📍 Ort', value: ort },
-          { name: '🕒 Uhrzeit', value: uhrzeit },
-          { name: '📝 Status', value: status }
-        )
-        .setFooter({ text: `Von ${user}` });
+    fs.writeFileSync("stats.json", JSON.stringify(stats, null, 2));
 
-      await interaction.reply({ embeds: [embed] });
-    } catch (err) {
-      console.error('❌ Fehler im Modal:', err);
-      await interaction.reply({ content: '❌ Fehler bei der Eingabe.', ephemeral: true });
-    }
+    const embed = new EmbedBuilder()
+      .setColor("#2ecc71")
+      .setTitle("📋 Kontrolle durchgeführt")
+      .addFields(
+        { name: "👤 Kontrollierte Person", value: kontrollierteMention, inline: true },
+        { name: "🕒 Uhrzeit", value: uhrzeit, inline: true },
+        { name: "📍 Ort", value: ort, inline: true },
+        { name: "📝 Status", value: status },
+        { name: "👥 Dabei", value: dabei }
+      )
+      .setFooter({ text: `Von ${user} • ${new Date().toLocaleDateString("de-DE")}` });
+
+    await interaction.reply({ embeds: [embed] });
   }
 
-  if (interaction.isChatInputCommand() && interaction.commandName === 'stats') {
+  // --- /stats ---
+  if (interaction.isChatInputCommand() && interaction.commandName === "stats") {
     try {
-      let stats = JSON.parse(fs.readFileSync('stats.json', 'utf8'));
-
-      const sorted = Object.entries(stats.users)
+      const stats = JSON.parse(fs.readFileSync("stats.json", "utf8"));
+      const sortedUsers = Object.entries(stats.users)
         .sort((a, b) => b[1] - a[1])
-        .map(([user, count]) => `- ${user}: ${count}`)
-        .join('\n');
+        .map(([u, c]) => `- ${u}: ${c} Kontrolle(n)`)
+        .join("\n");
 
       const embed = new EmbedBuilder()
-        .setColor('#3498db')
-        .setTitle('📊 Statistik')
+        .setColor("#3498db")
+        .setTitle("📊 Kontroll-Statistik")
+        .setDescription(`👥 **Kontrollen pro Nutzer:**\n${sortedUsers || "Noch keine"}\n\n`)
         .addFields(
-          { name: '📅 Heute', value: `${stats.today}`, inline: true },
-          { name: '📈 Gesamt', value: `${stats.total}`, inline: true },
-          { name: '👤 Letzter Name', value: stats.lastName },
-          { name: '🧑‍✈️ Letzter Prüfer', value: stats.lastBy },
-          { name: '👥 Nutzer Übersicht', value: sorted || 'Keine Daten' }
+          { name: "📅 Heute", value: `${stats.today}`, inline: true },
+          { name: "📈 Insgesamt", value: `${stats.total}`, inline: true },
+          { name: "👤 Letzter Name", value: stats.lastName },
+          { name: "🧑‍✈️ Durchgeführt von", value: stats.lastBy }
         );
 
       await interaction.reply({ embeds: [embed] });
-    } catch (err) {
-      await interaction.reply({ content: '❌ Fehler beim Laden der Statistik.', ephemeral: true });
+    } catch (e) {
+      console.error("❌ Fehler bei /stats:", e);
+      notifyError("❌ Fehler bei /stats");
+      await interaction.reply({ content: "❌ Fehler beim Laden der Statistik", ephemeral: true });
     }
   }
 
-  if (interaction.isChatInputCommand() && interaction.commandName === 'health') {
-    await interaction.reply({ content: '✅ Bot ist online!' });
+  // --- /health ---
+  if (interaction.isChatInputCommand() && interaction.commandName === "health") {
+    const status = client.isReady() ? "✅ ONLINE" : "❌ OFFLINE";
+    await interaction.reply({ content: `📶 Bot-Status: ${status}`, ephemeral: true });
   }
 });
+
+// 🔐 Fehler-Handling
+process.on("unhandledRejection", reason => {
+  console.error("🛑 Unhandled Rejection:", reason);
+  notifyError(`🛑 Unhandled Rejection:\n${reason}`);
+});
+process.on("uncaughtException", err => {
+  console.error("💥 Uncaught Exception:", err);
+  notifyError(`💥 Uncaught Exception:\n${err.message}`);
+});
+
+function notifyError(msg) {
+  if (!client.isReady()) return;
+  const channel = client.channels.cache.get(process.env.ALERT_CHANNEL_ID);
+  if (channel) {
+    channel.send({ content: `🚨 **Bot-Fehler:**\n\`\`\`${msg}\`\`\`` }).catch(console.error);
+  }
+}
+
+// 🔌 Shutdown-Message
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+async function shutdown() {
+  const channel = client.channels.cache.get(process.env.STARTUP_CHANNEL_ID);
+  if (channel) await channel.send("🔴 **Kontrolle-Bot wird beendet.**").catch(() => {});
+  process.exit(0);
+}
 
 client.login(process.env.DISCORD_TOKEN);
