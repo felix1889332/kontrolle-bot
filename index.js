@@ -67,7 +67,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
     const userSelect = new UserSelectMenuBuilder()
       .setCustomId("kontrolle_user_select")
-      .setPlaceholder("Wähle die Person, mit der du kontrolliert hast")
+      .setPlaceholder("User hinzufügen")
       .setMinValues(1)
       .setMaxValues(1);
 
