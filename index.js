@@ -147,4 +147,3 @@ async function handleKontrolleModal(interaction) {
     const embed = new
 ::contentReference[oaicite:0]{index=0}
  
-
