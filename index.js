@@ -71,14 +71,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
     const userSelect = new UserSelectMenuBuilder()
       .setCustomId("kontrolle_user_select")
-      .setPlaceholder("👥 Wähle die Person, mit der du kontrolliert hast")
+      .setPlaceholder("Wer von diesen Manyaks???")
       .setMinValues(1)
       .setMaxValues(1);
 
     const row = new ActionRowBuilder().addComponents(userSelect);
 
     await interaction.reply({
-      content: "Wähle die Person, die kontrolliert wurde:",
+      content: "👥 Wähle die Person, mit der du kontrolliert hast:",
       components: [row],
       ephemeral: true
     });
