@@ -113,8 +113,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           .setCustomId("input_uhrzeit").setLabel("🕒 Uhrzeit").setStyle(TextInputStyle.Short).setRequired(true))
       );
 
-    await interaction.reply({ content: "📄 Bitte fülle jetzt das Formular aus...", ephemeral: true });
-    await interaction.showModal(modal);
+   await interaction.showModal(modal);
   }
 
   if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith("kontrolle_modal__")) {
