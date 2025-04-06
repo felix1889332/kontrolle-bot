@@ -25,7 +25,6 @@ app.get("/health", (req, res) => {
 });
 app.listen(3000, () => console.log("🌐 Webserver läuft auf Port 3000"));
 
-// 🔁 Selbstping für Replit
 setInterval(() => {
   if (process.env.REPL_URL) {
     fetch("https://" + process.env.REPL_URL).catch(() => {});
@@ -43,7 +42,6 @@ client.once("ready", () => {
   }
 });
 
-// Slash-Commands
 const commands = [
   new SlashCommandBuilder().setName("kontrolle").setDescription("Starte eine Kontrolle"),
   new SlashCommandBuilder().setName("stats").setDescription("Zeigt die Kontrollstatistik an"),
@@ -65,13 +63,11 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
   }
 })();
 
-// 📥 Command-Handler
 client.on(Events.InteractionCreate, async (interaction) => {
-  // --- /kontrolle ---
   if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
     const userSelect = new UserSelectMenuBuilder()
       .setCustomId("kontrolle_user_select")
-      .setPlaceholder("Aziz stinkt")
+      .setPlaceholder("Wähle die Person, mit der du kontrolliert hast")
       .setMinValues(1)
       .setMaxValues(1);
 
@@ -84,14 +80,29 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   }
 
-  // --- Select Menu verarbeitet ---
   if (interaction.isUserSelectMenu() && interaction.customId === "kontrolle_user_select") {
     const selectedUser = interaction.users.first();
-    const userTag = selectedUser.tag;
-    const userMention = `<@${selectedUser.id}>`;
+
+    const dabeiSelect = new UserSelectMenuBuilder()
+      .setCustomId(`kontrolle_dabei_select__${selectedUser.id}`)
+      .setPlaceholder("Wähle alle Personen, die bei der Kontrolle dabei waren")
+      .setMinValues(0)
+      .setMaxValues(10);
+
+    const row = new ActionRowBuilder().addComponents(dabeiSelect);
+
+    await interaction.update({
+      content: `✅ Kontrollierende Person: <@${selectedUser.id}>\nJetzt: Wer war dabei?`,
+      components: [row]
+    });
+  }
+
+  if (interaction.isUserSelectMenu() && interaction.customId.startsWith("kontrolle_dabei_select__")) {
+    const kontrollierteId = interaction.customId.split("__")[1];
+    const dabeiMentions = interaction.users.map(u => `<@${u.id}>`).join(", ") || "Keine Angabe";
 
     const modal = new ModalBuilder()
-      .setCustomId(`kontrolle_modal__${selectedUser.id}`)
+      .setCustomId(`kontrolle_modal__${kontrollierteId}__${Buffer.from(dabeiMentions).toString("base64")}`)
       .setTitle("📝 Kontrolle durchführen")
       .addComponents(
         new ActionRowBuilder().addComponents(new TextInputBuilder()
@@ -99,26 +110,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
         new ActionRowBuilder().addComponents(new TextInputBuilder()
           .setCustomId("input_status").setLabel("📝 Status").setStyle(TextInputStyle.Paragraph).setRequired(true)),
         new ActionRowBuilder().addComponents(new TextInputBuilder()
-          .setCustomId("input_dabei").setLabel("👥 Wer war dabei?").setStyle(TextInputStyle.Short).setRequired(false)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder()
           .setCustomId("input_uhrzeit").setLabel("🕒 Uhrzeit").setStyle(TextInputStyle.Short).setRequired(true))
       );
 
+    await interaction.reply({ content: "📄 Bitte fülle jetzt das Formular aus...", ephemeral: true });
     await interaction.showModal(modal);
   }
 
-  // --- Modal Verarbeitung ---
   if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith("kontrolle_modal__")) {
-    const kontrollierteId = interaction.customId.split("__")[1];
+    const parts = interaction.customId.split("__");
+    const kontrollierteId = parts[1];
+    const dabeiDecoded = parts[2] ? Buffer.from(parts[2], "base64").toString("utf8") : "Keine Angabe";
     const kontrollierteMention = `<@${kontrollierteId}>`;
 
     const ort = interaction.fields.getTextInputValue("input_ort");
     const status = interaction.fields.getTextInputValue("input_status");
-    const dabei = interaction.fields.getTextInputValue("input_dabei") || "Keine Angabe";
     const uhrzeit = interaction.fields.getTextInputValue("input_uhrzeit");
     const user = interaction.user.tag;
 
-    // 📊 Statistik laden/speichern
     let stats = { today: 0, total: 0, lastName: "Noch niemand", lastBy: "Unbekannt", users: {} };
     try { stats = JSON.parse(fs.readFileSync("stats.json", "utf8")); } catch {}
 
@@ -138,14 +147,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
         { name: "🕒 Uhrzeit", value: uhrzeit, inline: true },
         { name: "📍 Ort", value: ort, inline: true },
         { name: "📝 Status", value: status },
-        { name: "👥 Dabei", value: dabei }
+        { name: "👥 Dabei", value: dabeiDecoded }
       )
       .setFooter({ text: `Von ${user} • ${new Date().toLocaleDateString("de-DE")}` });
 
     await interaction.reply({ embeds: [embed] });
   }
 
-  // --- /stats ---
   if (interaction.isChatInputCommand() && interaction.commandName === "stats") {
     try {
       const stats = JSON.parse(fs.readFileSync("stats.json", "utf8"));
@@ -173,14 +181,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 
-  // --- /health ---
   if (interaction.isChatInputCommand() && interaction.commandName === "health") {
     const status = client.isReady() ? "✅ ONLINE" : "❌ OFFLINE";
     await interaction.reply({ content: `📶 Bot-Status: ${status}`, ephemeral: true });
   }
 });
 
-// 🔐 Fehler-Handling
 process.on("unhandledRejection", reason => {
   console.error("🛑 Unhandled Rejection:", reason);
   notifyError(`🛑 Unhandled Rejection:\n${reason}`);
@@ -198,7 +204,6 @@ function notifyError(msg) {
   }
 }
 
-// 🔌 Shutdown-Message
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
