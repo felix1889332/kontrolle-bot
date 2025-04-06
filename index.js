@@ -71,14 +71,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
     const userSelect = new UserSelectMenuBuilder()
       .setCustomId("kontrolle_user_select")
-      .setPlaceholder("Wer von diesen Manyaks???")
+      .setPlaceholder("Aziz stinkt")
       .setMinValues(1)
       .setMaxValues(1);
 
     const row = new ActionRowBuilder().addComponents(userSelect);
 
     await interaction.reply({
-      content: "👥 Wähle die Person, mit der du kontrolliert hast:",
+      content: "👥 Wähle dich selber aus:",
       components: [row],
       ephemeral: true
     });
@@ -134,7 +134,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       .setColor("#2ecc71")
       .setTitle("📋 Kontrolle durchgeführt")
       .addFields(
-        { name: "👤 Kontrollierte Person", value: kontrollierteMention, inline: true },
+        { name: "👤 Kontrollierende Person", value: kontrollierteMention, inline: true },
         { name: "🕒 Uhrzeit", value: uhrzeit, inline: true },
         { name: "📍 Ort", value: ort, inline: true },
         { name: "📝 Status", value: status },
