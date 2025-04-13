@@ -98,10 +98,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (interaction.isUserSelectMenu() && interaction.customId.startsWith("kontrolle_dabei_select__")) {
     const kontrollierteId = interaction.customId.split("__")[1];
-    const dabeiMentions = interaction.users.map(u => `<@${u.id}>`).join(", ") || "Keine Angabe";
+    const dabeiUserIds = interaction.values;
+
+    // Speichere die IDs im Cache (zur Vermeidung langer CustomIDs)
+    client.kontrolleCache = client.kontrolleCache || {};
+    client.kontrolleCache[interaction.user.id] = {
+      kontrollierteId,
+      dabeiUserIds
+    };
 
     const modal = new ModalBuilder()
-      .setCustomId(`kontrolle_modal__${kontrollierteId}__${Buffer.from(dabeiMentions).toString("base64")}`)
+      .setCustomId(`kontrolle_modal`)
       .setTitle("📝 Kontrolle durchführen")
       .addComponents(
         new ActionRowBuilder().addComponents(new TextInputBuilder()
@@ -115,11 +122,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.showModal(modal);
   }
 
-  if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith("kontrolle_modal__")) {
-    const parts = interaction.customId.split("__");
-    const kontrollierteId = parts[1];
-    const dabeiDecoded = parts[2] ? Buffer.from(parts[2], "base64").toString("utf8") : "Keine Angabe";
+  if (interaction.type === InteractionType.ModalSubmit && interaction.customId === "kontrolle_modal") {
+    const userCache = client.kontrolleCache?.[interaction.user.id];
+    if (!userCache) return interaction.reply({ content: "❌ Fehler beim Abrufen der Nutzerdaten.", ephemeral: true });
+
+    const { kontrollierteId, dabeiUserIds } = userCache;
     const kontrollierteMention = `<@${kontrollierteId}>`;
+    const dabeiMentions = dabeiUserIds.map(id => `<@${id}>`).join(", ") || "Keine Angabe";
 
     const ort = interaction.fields.getTextInputValue("input_ort");
     const status = interaction.fields.getTextInputValue("input_status");
@@ -145,7 +154,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         { name: "🕒 Uhrzeit", value: uhrzeit, inline: true },
         { name: "📍 Ort", value: ort, inline: true },
         { name: "📝 Status", value: status },
-        { name: "👥 Dabei", value: dabeiDecoded }
+        { name: "👥 Dabei", value: dabeiMentions }
       )
       .setFooter({ text: `Von ${user} • ${new Date().toLocaleDateString("de-DE")}` });
 
@@ -183,15 +192,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const status = client.isReady() ? "✅ ONLINE" : "❌ OFFLINE";
     await interaction.reply({ content: `📶 Bot-Status: ${status}`, ephemeral: true });
   }
-});
-
-process.on("unhandledRejection", reason => {
-  console.error("🛑 Unhandled Rejection:", reason);
-  notifyError(`🛑 Unhandled Rejection:\n${reason}`);
-});
-process.on("uncaughtException", err => {
-  console.error("💥 Uncaught Exception:", err);
-  notifyError(`💥 Uncaught Exception:\n${err.message}`);
 });
 
 function notifyError(msg) {
