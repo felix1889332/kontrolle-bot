@@ -160,7 +160,7 @@ Jetzt: Wer war dabei?`,
       const sortedUsers = Object.entries(stats.users)
         .sort((a, b) => b[1] - a[1])
         .map(([u, c]) => `- ${u}: ${c} Kontrolle(n)`)
-        .join("
+        .join("\n")
 ");
 
       const embed = new EmbedBuilder()
