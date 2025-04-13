@@ -32,7 +32,7 @@ async def einzahlen(ctx, person: discord.Member, betrag: int, *, grund: str):
     embed.add_field(name="💵 Betrag", value=f"{betrag}€", inline=False)
     embed.add_field(name="📝 Grund", value=grund, inline=False)
     embed.set_footer(text=f"Erstellt von {ctx.author.name} am {datetime.now().strftime('%d.%m.%Y – %H:%M Uhr')}")
-
+    
     channel = bot.get_channel(EIN_AUSZAHLUNGEN_CHANNEL_ID)
     await channel.send(embed=embed)
     await ctx.message.add_reaction("✅")
@@ -48,13 +48,13 @@ async def abheben(ctx, person: discord.Member, betrag: int, *, grund: str):
     embed.add_field(name="💵 Betrag", value=f"{betrag}€", inline=False)
     embed.add_field(name="📝 Grund", value=grund, inline=False)
     embed.set_footer(text=f"Erstellt von {ctx.author.name} am {datetime.now().strftime('%d.%m.%Y – %H:%M Uhr')}")
-
+    
     channel = bot.get_channel(EIN_AUSZAHLUNGEN_CHANNEL_ID)
     await channel.send(embed=embed)
     await ctx.message.add_reaction("✅")
 
 @bot.command()
-async def abgabe(ctx, vonwem: str, betrag: int):  # <-- FIXED: schließende Klammer wieder da
+async def abgabe(ctx, vonwem: str, betrag: int):  # <-- GESCHLOSSENE Klammer!
     embed = discord.Embed(
         title="📤 Abgabe",
         color=discord.Color.light_grey(),
@@ -64,7 +64,7 @@ async def abgabe(ctx, vonwem: str, betrag: int):  # <-- FIXED: schließende Klam
     embed.add_field(name="📅 Kalenderwoche", value=f"KW {get_kw()}", inline=False)
     embed.add_field(name="💵 Betrag", value=f"{betrag}€", inline=False)
     embed.set_footer(text=f"Erstellt von {ctx.author.name} am {datetime.now().strftime('%d.%m.%Y – %H:%M Uhr')}")
-
+    
     channel = bot.get_channel(ABGABEN_CHANNEL_ID)
     await channel.send(embed=embed)
     await ctx.message.add_reaction("✅")
@@ -72,5 +72,4 @@ async def abgabe(ctx, vonwem: str, betrag: int):  # <-- FIXED: schließende Klam
 # === Bot starten ===
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
-    raise ValueError("❌ Umgebungsvariable DISCORD_TOKEN wurde nicht gesetzt!")
-bot.run(TOKEN)
+    raise ValueError("❌
