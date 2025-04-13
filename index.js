@@ -19,11 +19,11 @@ const {
 const { REST } = require("@discordjs/rest");
 
 const app = express();
-app.get("/", (req, res) => res.send("âœ… Kontrolle-Bot lÃ¤uft!"));
+app.get("/", (req, res) => res.send("✅ Kontrolle-Bot läuft!"));
 app.get("/health", (req, res) => {
-  res.status(client.isReady() ? 200 : 500).send(client.isReady() ? "âœ… Bot ist bereit" : "â�Œ Bot nicht bereit");
+  res.status(client.isReady() ? 200 : 500).send(client.isReady() ? "✅ Bot ist bereit" : "❌ Bot nicht bereit");
 });
-app.listen(3000, () => console.log("ğŸŒ� Webserver lÃ¤uft auf Port 3000"));
+app.listen(3000, () => console.log("🌐 Webserver läuft auf Port 3000"));
 
 setInterval(() => {
   if (process.env.REPL_URL) {
@@ -34,11 +34,10 @@ setInterval(() => {
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once("ready", () => {
-  console.log(`âœ… Bot ist online als ${client.user.tag}`);
-
+  console.log(`✅ Bot ist online als ${client.user.tag}`);
   const startupChannel = client.channels.cache.get(process.env.STARTUP_CHANNEL_ID);
   if (startupChannel) {
-    startupChannel.send("ğŸŸ¢ **Kontrolle-Bot wurde gestartet!**").catch(console.error);
+    startupChannel.send("🟢 **Kontrolle-Bot wurde gestartet!**").catch(console.error);
   }
 });
 
@@ -55,10 +54,10 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
   for (const guildId of guilds) {
     try {
       await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId), { body: commands });
-      console.log(`âœ… Slash-Commands registriert fÃ¼r Guild ${guildId}`);
+      console.log(`✅ Slash-Commands registriert für Guild ${guildId}`);
     } catch (error) {
-      console.error("â�Œ Fehler beim Registrieren:", error);
-      notifyError(`â�Œ Fehler bei Command-Registrierung (Guild ${guildId}): ${error.message}`);
+      console.error("❌ Fehler beim Registrieren:", error);
+      notifyError(`❌ Fehler bei Command-Registrierung (Guild ${guildId}): ${error.message}`);
     }
   }
 })();
@@ -67,14 +66,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
     const userSelect = new UserSelectMenuBuilder()
       .setCustomId("kontrolle_user_select")
-      .setPlaceholder("WÃ¤hle die Person, mit der du kontrolliert hast")
+      .setPlaceholder("Wähle die Person, mit der du kontrolliert hast")
       .setMinValues(1)
       .setMaxValues(1);
 
     const row = new ActionRowBuilder().addComponents(userSelect);
 
     await interaction.reply({
-      content: "ğŸ‘¥ WÃ¤hle dich selber aus:",
+      content: "👥 Wähle dich selber aus:",
       components: [row],
       ephemeral: true
     });
@@ -85,15 +84,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const dabeiSelect = new UserSelectMenuBuilder()
       .setCustomId(`kontrolle_dabei_select__${selectedUser.id}`)
-      .setPlaceholder("WÃ¤hle alle Personen, die bei der Kontrolle dabei waren")
+      .setPlaceholder("Wähle alle Personen, die bei der Kontrolle dabei waren")
       .setMinValues(0)
       .setMaxValues(10);
 
     const row = new ActionRowBuilder().addComponents(dabeiSelect);
 
     await interaction.update({
-      content: `âœ… Kontrollierende Person: <@${selectedUser.id}>
-Jetzt: Wer war dabei?`,
+      content: `✅ Kontrollierende Person: <@${selectedUser.id}>\nJetzt: Wer war dabei?`,
       components: [row]
     });
   }
@@ -104,14 +102,14 @@ Jetzt: Wer war dabei?`,
 
     const modal = new ModalBuilder()
       .setCustomId(`kontrolle_modal__${kontrollierteId}__${Buffer.from(dabeiMentions).toString("base64")}`)
-      .setTitle("ğŸ“� Kontrolle durchfÃ¼hren")
+      .setTitle("📝 Kontrolle durchführen")
       .addComponents(
         new ActionRowBuilder().addComponents(new TextInputBuilder()
-          .setCustomId("input_ort").setLabel("ğŸ“� Ort").setStyle(TextInputStyle.Short).setRequired(true)),
+          .setCustomId("input_ort").setLabel("📍 Ort").setStyle(TextInputStyle.Short).setRequired(true)),
         new ActionRowBuilder().addComponents(new TextInputBuilder()
-          .setCustomId("input_status").setLabel("ğŸ“� Status").setStyle(TextInputStyle.Paragraph).setRequired(true)),
+          .setCustomId("input_status").setLabel("📝 Status").setStyle(TextInputStyle.Paragraph).setRequired(true)),
         new ActionRowBuilder().addComponents(new TextInputBuilder()
-          .setCustomId("input_uhrzeit").setLabel("ğŸ•’ Uhrzeit").setStyle(TextInputStyle.Short).setRequired(true))
+          .setCustomId("input_uhrzeit").setLabel("🕒 Uhrzeit").setStyle(TextInputStyle.Short).setRequired(true))
       );
 
     await interaction.showModal(modal);
@@ -141,15 +139,15 @@ Jetzt: Wer war dabei?`,
 
     const embed = new EmbedBuilder()
       .setColor("#2ecc71")
-      .setTitle("ğŸ“‹ Kontrolle durchgefÃ¼hrt")
+      .setTitle("📋 Kontrolle durchgeführt")
       .addFields(
-        { name: "ğŸ‘¤ Kontrollierte Person", value: kontrollierteMention, inline: true },
-        { name: "ğŸ•’ Uhrzeit", value: uhrzeit, inline: true },
-        { name: "ğŸ“� Ort", value: ort, inline: true },
-        { name: "ğŸ“� Status", value: status },
-        { name: "ğŸ‘¥ Dabei", value: dabeiDecoded }
+        { name: "👤 Kontrollierte Person", value: kontrollierteMention, inline: true },
+        { name: "🕒 Uhrzeit", value: uhrzeit, inline: true },
+        { name: "📍 Ort", value: ort, inline: true },
+        { name: "📝 Status", value: status },
+        { name: "👥 Dabei", value: dabeiDecoded }
       )
-      .setFooter({ text: `Von ${user} â€¢ ${new Date().toLocaleDateString("de-DE")}` });
+      .setFooter({ text: `Von ${user} • ${new Date().toLocaleDateString("de-DE")}` });
 
     await interaction.reply({ embeds: [embed] });
   }
@@ -160,54 +158,47 @@ Jetzt: Wer war dabei?`,
       const sortedUsers = Object.entries(stats.users)
         .sort((a, b) => b[1] - a[1])
         .map(([u, c]) => `- ${u}: ${c} Kontrolle(n)`)
-        .join("\n")
-");
+        .join("\n");
 
       const embed = new EmbedBuilder()
         .setColor("#3498db")
-        .setTitle("ğŸ“Š Kontroll-Statistik")
-        .setDescription(`ğŸ‘¥ **Kontrollen pro Nutzer:**
-${sortedUsers || "Noch keine"}
-
-`)
+        .setTitle("📊 Kontroll-Statistik")
+        .setDescription(`👥 **Kontrollen pro Nutzer:**\n${sortedUsers || "Noch keine"}\n\n`)
         .addFields(
-          { name: "ğŸ“… Heute", value: `${stats.today}`, inline: true },
-          { name: "ğŸ“ˆ Insgesamt", value: `${stats.total}`, inline: true },
-          { name: "ğŸ‘¤ Letzter Name", value: stats.lastName },
-          { name: "ğŸ§‘â€�âœˆï¸� DurchgefÃ¼hrt von", value: stats.lastBy }
+          { name: "📅 Heute", value: `${stats.today}`, inline: true },
+          { name: "📈 Insgesamt", value: `${stats.total}`, inline: true },
+          { name: "👤 Letzter Name", value: stats.lastName },
+          { name: "🧑‍✈️ Durchgeführt von", value: stats.lastBy }
         );
 
       await interaction.reply({ embeds: [embed] });
     } catch (e) {
-      console.error("â�Œ Fehler bei /stats:", e);
-      notifyError("â�Œ Fehler bei /stats");
-      await interaction.reply({ content: "â�Œ Fehler beim Laden der Statistik", ephemeral: true });
+      console.error("❌ Fehler bei /stats:", e);
+      notifyError("❌ Fehler bei /stats");
+      await interaction.reply({ content: "❌ Fehler beim Laden der Statistik", ephemeral: true });
     }
   }
 
   if (interaction.isChatInputCommand() && interaction.commandName === "health") {
-    const status = client.isReady() ? "âœ… ONLINE" : "â�Œ OFFLINE";
-    await interaction.reply({ content: `ğŸ“¶ Bot-Status: ${status}`, ephemeral: true });
+    const status = client.isReady() ? "✅ ONLINE" : "❌ OFFLINE";
+    await interaction.reply({ content: `📶 Bot-Status: ${status}`, ephemeral: true });
   }
 });
 
 process.on("unhandledRejection", reason => {
-  console.error("ğŸ›‘ Unhandled Rejection:", reason);
-  notifyError(`ğŸ›‘ Unhandled Rejection:
-${reason}`);
+  console.error("🛑 Unhandled Rejection:", reason);
+  notifyError(`🛑 Unhandled Rejection:\n${reason}`);
 });
 process.on("uncaughtException", err => {
-  console.error("ğŸ’¥ Uncaught Exception:", err);
-  notifyError(`ğŸ’¥ Uncaught Exception:
-${err.message}`);
+  console.error("💥 Uncaught Exception:", err);
+  notifyError(`💥 Uncaught Exception:\n${err.message}`);
 });
 
 function notifyError(msg) {
   if (!client.isReady()) return;
   const channel = client.channels.cache.get(process.env.ALERT_CHANNEL_ID);
   if (channel) {
-    channel.send({ content: `ğŸš¨ **Bot-Fehler:**
-\`\`\`${msg}\`\`\`` }).catch(console.error);
+    channel.send({ content: `🚨 **Bot-Fehler:**\n\`\`\`${msg}\`\`\`` }).catch(console.error);
   }
 }
 
@@ -216,7 +207,7 @@ process.on("SIGTERM", shutdown);
 
 async function shutdown() {
   const channel = client.channels.cache.get(process.env.STARTUP_CHANNEL_ID);
-  if (channel) await channel.send("ğŸ”´ **Kontrolle-Bot wird beendet.**").catch(() => {});
+  if (channel) await channel.send("🔴 **Kontrolle-Bot wird beendet.**").catch(() => {});
   process.exit(0);
 }
 
