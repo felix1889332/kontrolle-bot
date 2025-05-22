@@ -64,6 +64,20 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand() && interaction.commandName === "kontrolle") {
+    const allowedChannelIds = [
+      process.env.KONTROLLE_CHANNEL_ID_1,
+      process.env.KONTROLLE_CHANNEL_ID_2,
+      process.env.KONTROLLE_CHANNEL_ID_3,
+      process.env.KONTROLLE_CHANNEL_ID_4
+    ];
+
+    if (!allowedChannelIds.includes(interaction.channelId)) {
+      return interaction.reply({
+        content: "❌ Dieser Befehl darf nur in bestimmten Channels verwendet werden.",
+        ephemeral: true
+      });
+    }
+
     const userSelect = new UserSelectMenuBuilder()
       .setCustomId("kontrolle_user_select")
       .setPlaceholder("Wähle die Person, mit der du kontrolliert hast")
